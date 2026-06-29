@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="EmailServices-Intergation/EmailServices-API.csproj" />
+  <Project Path="EmailServices.Application/EmailServices.Application.csproj" />
+  <Project Path="EmailServices.Domain/EmailServices.Domain.csproj" />
+  <Project Path="EmailServices.Infrastructure/EmailServices.Infrastructure.csproj" />
+</Solution>
