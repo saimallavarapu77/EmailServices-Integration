@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-using EmailServices.Application.Interfaces.Repositories;
+﻿using EmailServices.Application.Interfaces.Repositories;
 using EmailServices.Domain.Entities;
 using EmailServices.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +23,12 @@ public class UserRepository : IUserRepository
     public async Task AddAsync(User user)
     {
         await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
     }
+
+    public Task UpdateUserAsync(User user)
+    {
+        _context.Users.Update(user);
+        return Task.CompletedTask;
+    }
+    
 }

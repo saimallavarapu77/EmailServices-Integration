@@ -9,4 +9,5 @@ namespace EmailServices.Application.Interfaces.Services;
 public interface IAuthService
 {
     Task<(bool Success, string Message)> RegisterAsync(RegisterRequest request);
+    Task<(bool Success, string Message)> VerifyOtpAsync(VerifyOtpRequest request);
 }

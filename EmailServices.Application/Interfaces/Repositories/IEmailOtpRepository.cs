@@ -6,9 +6,11 @@ using EmailServices.Domain.Entities;
 
 namespace EmailServices.Application.Interfaces.Repositories;
 
-public interface IUserRepository
+public interface IEmailOtpRepository
 {
-    Task<User?> GetByEmailAsync(string email);
-    Task AddAsync(User user);
-    Task UpdateUserAsync(User user);
+    Task AddAsync(EmailOtp otp);
+
+    Task<EmailOtp?> GetValidOtpAsync(int userId, string otpCode);
+
+    Task UpdateAsync(EmailOtp otp);
 }
