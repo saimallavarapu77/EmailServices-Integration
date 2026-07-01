@@ -13,4 +13,5 @@ public interface IEmailOtpRepository
     Task<EmailOtp?> GetValidOtpAsync(int userId, string otpCode);
 
     Task UpdateAsync(EmailOtp otp);
+    Task MarkOldOtpsAsUsedAsync(int userId);
 }

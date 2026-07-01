@@ -2,8 +2,6 @@
 
 using EmailServices.Application.DTOs.Auth;
 using EmailServices.Application.Interfaces.Services;
-using Microsoft.AspNetCore.Mvc;
-
 namespace EmailServices_API.Controllers;
 
 [Route("api/[controller]")]
@@ -27,6 +25,20 @@ public class AuthController : ControllerBase
 
         return Ok(result.Message);
     }
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest request)
+    {
+        var result = await _authService.LoginAsync(request);
+
+        if (!result.Success)
+            return BadRequest(result.Message);
+
+        return Ok(new
+        {
+            message = result.Message,
+            token = result.Token
+        });
+    }  
 
     [HttpPost("verify-otp")]
     public async Task<IActionResult> VerifyOtp(VerifyOtpRequest request)

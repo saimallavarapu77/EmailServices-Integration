@@ -17,17 +17,20 @@ public class AuthService : IAuthService
     private readonly IEmailOtpRepository _emailOtpRepository;
     private readonly IEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IJwtService _jwtService;
 
     public AuthService(
      IUserRepository userRepository,
      IEmailOtpRepository emailOtpRepository,
      IEmailService emailService,
-     IUnitOfWork unitOfWork)
+     IUnitOfWork unitOfWork, 
+     IJwtService jwtService)
     {
         _userRepository = userRepository;
         _emailOtpRepository = emailOtpRepository;
         _emailService = emailService;
         _unitOfWork = unitOfWork;
+        _jwtService = jwtService;
     }
     private static string GenerateSecureOtp()
     {
@@ -37,10 +40,32 @@ public class AuthService : IAuthService
     public async Task<(bool Success, string Message)> RegisterAsync(RegisterRequest request)
     {
         var existingUser = await _userRepository.GetByEmailAsync(request.Email);
-
         if (existingUser != null)
         {
-            return (false, "Email already exists.");
+            if (existingUser.IsEmailVerified)
+                return (false, "Email already registered. Please login.");
+
+            await _emailOtpRepository.MarkOldOtpsAsUsedAsync(existingUser.Id);
+
+            var newOtpCode = GenerateSecureOtp();
+
+            var newOtp = new EmailOtp
+            {
+                UserId = existingUser.Id,
+                OtpCode = newOtpCode,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+                IsUsed = false
+            };
+
+            await _emailOtpRepository.AddAsync(newOtp);
+            await _unitOfWork.SaveChangesAsync();
+
+            await _emailService.SendOtpEmailAsync(
+                existingUser.Email,
+                existingUser.Name,
+                newOtpCode);
+
+            return (true, "Your email is not verified. A new OTP has been sent.");
         }
 
         var user = new User
@@ -102,5 +127,25 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync();
 
         return (true, "Email verified successfully.");
+    }
+
+    public async Task<(bool Success, string Message, string? Token)> LoginAsync(LoginRequest request)
+    {
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+
+        if (user == null)
+            return (false, "Invalid email or password.", null);
+
+        if (!user.IsEmailVerified)
+            return (false, "Please verify your email before login.", null);
+
+        var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+
+        if (!isPasswordValid)
+            return (false, "Invalid email or password.", null);
+
+        var token = _jwtService.GenerateToken(user.Id, user.Name, user.Email);
+
+        return (true, "Login successful.", token);
     }
 }

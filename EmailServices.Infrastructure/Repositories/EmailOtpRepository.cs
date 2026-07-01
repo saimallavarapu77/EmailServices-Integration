@@ -36,4 +36,16 @@ public class EmailOtpRepository : IEmailOtpRepository
         _context.EmailOtps.Update(otp);
         return Task.CompletedTask;
     }
+
+    public async Task MarkOldOtpsAsUsedAsync(int userId)
+    {
+        var oldOtps = await _context.EmailOtps
+            .Where(x => x.UserId == userId && !x.IsUsed)
+            .ToListAsync();
+
+        foreach (var otp in oldOtps)
+        {
+            otp.IsUsed = true;
+        }
+    }
 }
