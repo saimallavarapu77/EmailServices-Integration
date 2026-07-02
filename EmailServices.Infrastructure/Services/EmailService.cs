@@ -149,4 +149,45 @@ If you didn't request this verification, you can safely ignore this email.
 
         await smtp.DisconnectAsync(true);
     }
+
+    public async Task SendPasswordResetEmailAsync(string toEmail, string userName, string resetLink)
+    {
+        var email = new MimeMessage();
+
+        email.From.Add(new MailboxAddress(
+            _smtpSettings.SenderName,
+            _smtpSettings.SenderEmail));
+
+        email.To.Add(MailboxAddress.Parse(toEmail));
+
+        email.Subject = "Reset Your Password";
+
+        email.Body = new TextPart("html")
+        {
+            Text = $@"
+        <h2>Hello {userName},</h2>
+        <p>You requested to reset your password.</p>
+        <p>Click the link below to reset your password:</p>
+        <p><a href='{resetLink}'>Reset Password</a></p>
+        <p>This link expires in 15 minutes.</p>
+        <p>If you did not request this, ignore this email.</p>
+        <br/>
+        <p>Regards,<br/>Verify Email Team</p>"
+        };
+
+        using var smtp = new SmtpClient();
+
+        await smtp.ConnectAsync(
+            _smtpSettings.Host,
+            _smtpSettings.Port,
+            SecureSocketOptions.StartTls);
+
+        await smtp.AuthenticateAsync(
+            _smtpSettings.SenderEmail,
+            _smtpSettings.Password);
+
+        await smtp.SendAsync(email);
+
+        await smtp.DisconnectAsync(true);
+    }
 }

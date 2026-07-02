@@ -18,24 +18,31 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IJwtService _jwtService;
-
+    private readonly IPasswordResetTokenRepository _passwordResetTokenRepository;
     public AuthService(
      IUserRepository userRepository,
      IEmailOtpRepository emailOtpRepository,
      IEmailService emailService,
      IUnitOfWork unitOfWork, 
-     IJwtService jwtService)
+     IJwtService jwtService,
+     IPasswordResetTokenRepository passwordResetTokenRepository)
     {
         _userRepository = userRepository;
         _emailOtpRepository = emailOtpRepository;
         _emailService = emailService;
         _unitOfWork = unitOfWork;
         _jwtService = jwtService;
+        _passwordResetTokenRepository = passwordResetTokenRepository;
     }
     private static string GenerateSecureOtp()
     {
         var number = RandomNumberGenerator.GetInt32(100000, 1000000);
         return number.ToString();
+    } 
+
+    private static string GeneratePasswordResetToken()
+    {
+        return Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     }
     public async Task<(bool Success, string Message)> RegisterAsync(RegisterRequest request)
     {
@@ -45,6 +52,11 @@ public class AuthService : IAuthService
             if (existingUser.IsEmailVerified)
                 return (false, "Email already registered. Please login.");
 
+            // Update latest details because account is not verified yet
+            existingUser.Name = request.Name;
+            existingUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+            await _userRepository.UpdateUserAsync(existingUser);
             await _emailOtpRepository.MarkOldOtpsAsUsedAsync(existingUser.Id);
 
             var newOtpCode = GenerateSecureOtp();
@@ -147,5 +159,83 @@ public class AuthService : IAuthService
         var token = _jwtService.GenerateToken(user.Id, user.Name, user.Email);
 
         return (true, "Login successful.", token);
+    }
+
+    public async Task<(bool Success, string Message)> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+
+        var responseMessage = "If an account exists for this email, a password reset link has been sent.";
+
+        if (user == null)
+            return (true, responseMessage);
+
+        var token = GeneratePasswordResetToken();
+
+        var resetToken = new PasswordResetToken
+        {
+            UserId = user.Id,
+            Token = token,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            IsUsed = false
+        };
+
+        await _passwordResetTokenRepository.AddAsync(resetToken);
+        await _unitOfWork.SaveChangesAsync();
+
+        var resetLink = $"https://localhost:3000/reset-password?token={token}";
+
+        await _emailService.SendPasswordResetEmailAsync(
+            user.Email,
+            user.Name,
+            resetLink);
+
+        return (true, responseMessage);
+    }
+
+    public async Task<(bool Success, string Message)> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var resetToken = await _passwordResetTokenRepository.GetByTokenAsync(request.Token);
+
+        if (resetToken == null)
+            return (false, "Invalid reset token.");
+
+        if (resetToken.IsUsed)
+            return (false, "Reset token already used.");
+
+        if (resetToken.ExpiresAt < DateTime.UtcNow)
+            return (false, "Reset token has expired.");
+
+        resetToken.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        resetToken.IsUsed = true;
+
+        await _passwordResetTokenRepository.UpdateAsync(resetToken);
+        await _unitOfWork.SaveChangesAsync();
+
+        return (true, "Password reset successfully.");
+    }
+
+    public async Task<(bool Success, string Message)> ChangePasswordAsync(
+    int userId,
+    ChangePasswordRequest request)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+            return (false, "User not found.");
+
+        var isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(
+            request.CurrentPassword,
+            user.PasswordHash);
+
+        if (!isCurrentPasswordValid)
+            return (false, "Current password is incorrect.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        await _userRepository.UpdateUserAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return (true, "Password changed successfully.");
     }
 }

@@ -30,5 +30,10 @@ public class UserRepository : IUserRepository
         _context.Users.Update(user);
         return Task.CompletedTask;
     }
-    
+    public async Task<User?> GetByIdAsync(int userId)
+    {
+        return await _context.Users
+            .FirstOrDefaultAsync(x => x.Id == userId);
+    }
+
 }
