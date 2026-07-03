@@ -145,4 +145,9 @@ public class AuthController : ControllerBase
                 null,
                 result.Message));
     }
+    [HttpGet("test-exception")]
+    public IActionResult TestException()
+    {
+        throw new Exception("Testing Serilog logging");
+    }
 }
