@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Email\Templates\ResetPassword.html" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\EmailServices.Application\EmailServices.Application.csproj" />
     <ProjectReference Include="..\EmailServices.Domain\EmailServices.Domain.csproj" />
   </ItemGroup>

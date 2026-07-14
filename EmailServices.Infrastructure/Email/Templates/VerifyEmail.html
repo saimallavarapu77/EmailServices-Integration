@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            width: 600px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .otp {
+            font-size: 32px;
+            color: #2563eb;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 5px;
+        }
+
+        .footer {
+            margin-top: 25px;
+            color: gray;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h2>Hello {{UserName}},</h2>
+
+        <p>Thank you for registering.</p>
+
+        <p>Your verification OTP is</p>
+
+        <div class="otp">
+
+            {{Otp}}
+
+        </div>
+
+        <p>This OTP expires in 5 minutes.</p>
+
+        <div class="footer">
+
+            EmailServices Team
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>
